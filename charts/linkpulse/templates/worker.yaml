@@ -17,11 +17,15 @@ spec:
         {{- include "linkpulse.labels" . | nindent 8 }}
         app.kubernetes.io/component: worker
     spec:
-      serviceAccountName: {{ include "linkpulse.serviceAccountName" . }}
+      serviceAccountName: {{ include "linkpulse.workerServiceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: worker
           image: "{{ .Values.image.repository }}-worker:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
             - containerPort: {{ .Values.worker.metricsPort }}
           env:
@@ -37,5 +41,13 @@ spec:
             - name: AWS_ENDPOINT_URL
               value: {{ .Values.aws.endpointUrl | quote }}
             {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.worker.metricsPort }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.worker.metricsPort }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}

@@ -1,0 +1,35 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "linkpulse.name" . }}
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    {{- with .Values.ingress.groupName }}
+    alb.ingress.kubernetes.io/group.name: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    # everything goes to web. nginx serves the static app at / and proxies /api/
+    # to the api service in cluster, so the api never needs its own ingress path
+    # and the redirect at /api/{code} resolves through the same host.
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "linkpulse.name" . }}-web
+                port:
+                  number: {{ .Values.web.port }}
+{{- end }}

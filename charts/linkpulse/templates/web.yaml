@@ -17,10 +17,14 @@ spec:
         {{- include "linkpulse.labels" . | nindent 8 }}
         app.kubernetes.io/component: web
     spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: web
           image: "{{ .Values.image.repository }}-web:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
             - containerPort: {{ .Values.web.port }}
           env:
@@ -29,6 +33,10 @@ spec:
             - name: API_UPSTREAM
               value: {{ .Values.web.apiUpstream | quote }}
           readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.web.port }}
+          livenessProbe:
             httpGet:
               path: /healthz
               port: {{ .Values.web.port }}
