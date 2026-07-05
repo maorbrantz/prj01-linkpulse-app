@@ -1,4 +1,6 @@
-FROM nginx:1.27-alpine
+# unprivileged variant runs as a non-root uid and listens on 8080 by default,
+# which is what the cluster policy requires and what the chart probes expect.
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 ENV WEB_PORT=8080 \
     API_UPSTREAM=http://api:8000
