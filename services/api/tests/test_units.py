@@ -1,7 +1,6 @@
 import json
 import logging
 
-import pytest
 from botocore.exceptions import ClientError
 
 from app.config import load_config
