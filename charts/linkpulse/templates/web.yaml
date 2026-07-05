@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "linkpulse.name" . }}-web
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "linkpulse.name" . }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "linkpulse.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}-web:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.web.port }}
+          env:
+            - name: WEB_PORT
+              value: "{{ .Values.web.port }}"
+            - name: API_UPSTREAM
+              value: {{ .Values.web.apiUpstream | quote }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.web.port }}
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "linkpulse.name" . }}-web
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "linkpulse.name" . }}
+    app.kubernetes.io/component: web
+  ports:
+    - port: {{ .Values.web.port }}
+      targetPort: {{ .Values.web.port }}

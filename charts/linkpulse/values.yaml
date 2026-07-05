@@ -1,0 +1,53 @@
+nameOverride: ""
+
+image:
+  repository: linkpulse
+  tag: local
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+aws:
+  region: us-east-1
+  linksTable: links
+  statsTable: click_stats
+  clickQueueUrl: ""
+  endpointUrl: ""
+
+api:
+  replicas: 2
+  port: 8000
+  baseUrl: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+worker:
+  replicas: 1
+  metricsPort: 9000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+web:
+  replicas: 2
+  port: 8080
+  apiUpstream: http://linkpulse-api:8000
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
