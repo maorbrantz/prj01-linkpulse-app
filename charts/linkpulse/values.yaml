@@ -30,10 +30,15 @@ aws:
   endpointUrl: ""
 
 api:
-  replicas: 2
   port: 8000
   baseUrl: ""
   serviceAccountName: ""
+  # the api runs as an argo rollouts Rollout with a canary strategy. the hpa owns
+  # replica count, so minReplicas is the floor rather than a static replicas value.
+  hpa:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
   resources:
     requests:
       cpu: 50m
