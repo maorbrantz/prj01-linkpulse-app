@@ -1,10 +1,12 @@
 import logging
+import random
 
 from botocore.exceptions import ClientError
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from .config import Config
 from .dependencies import (
     get_click_publisher,
     get_config,
@@ -71,13 +73,23 @@ def redirect(
     short_code: str,
     links: LinkRepository = Depends(get_link_repository),
     publisher: ClickPublisher = Depends(get_click_publisher),
+    config: Config = Depends(get_config),
 ) -> RedirectResponse:
+    _maybe_inject_failure(config)
     item = links.get(short_code)
     if item is None:
         raise HTTPException(status_code=404, detail="short code not found")
     publisher.publish(short_code)
     log_with_fields(logger, logging.INFO, "link_clicked", short_code=short_code)
     return RedirectResponse(url=item["url"], status_code=302)
+
+
+def _maybe_inject_failure(config: Config) -> None:
+    # fault injection for the canary rollback demo. when FAIL_RATE is set, that
+    # fraction of redirects return a 500 so a bad release fails its prometheus
+    # analysis. off by default, so normal releases are unaffected.
+    if config.fail_rate > 0 and random.random() < config.fail_rate:
+        raise HTTPException(status_code=500, detail="injected failure")
 
 
 @app.get("/links/{short_code}/stats", response_model=StatsResponse)
