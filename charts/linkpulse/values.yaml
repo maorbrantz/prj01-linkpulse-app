@@ -101,4 +101,6 @@ ingress:
   className: alb
   host: ""
   groupName: ""
+  # when set, the alb terminates tls with this acm cert and redirects http to https
+  certificateArn: ""
   annotations: {}
