@@ -7,8 +7,20 @@ image:
 
 serviceAccount:
   create: true
-  name: ""
-  annotations: {}
+
+# pod and container security context applied to every workload. these satisfy the
+# cluster policies (run as non root, seccomp runtime default, no privilege
+# escalation). the app images already run as a non-root user.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
 
 aws:
   region: us-east-1
@@ -21,6 +33,7 @@ api:
   replicas: 2
   port: 8000
   baseUrl: ""
+  serviceAccountName: ""
   resources:
     requests:
       cpu: 50m
@@ -32,6 +45,7 @@ api:
 worker:
   replicas: 1
   metricsPort: 9000
+  serviceAccountName: ""
   resources:
     requests:
       cpu: 50m
@@ -51,3 +65,10 @@ web:
     limits:
       cpu: 100m
       memory: 64Mi
+
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  groupName: ""
+  annotations: {}

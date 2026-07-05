@@ -17,11 +17,15 @@ spec:
         {{- include "linkpulse.labels" . | nindent 8 }}
         app.kubernetes.io/component: api
     spec:
-      serviceAccountName: {{ include "linkpulse.serviceAccountName" . }}
+      serviceAccountName: {{ include "linkpulse.apiServiceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: api
           image: "{{ .Values.image.repository }}-api:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
           ports:
             - containerPort: {{ .Values.api.port }}
           env:
@@ -31,6 +35,8 @@ spec:
               value: {{ .Values.aws.region | quote }}
             - name: LINKS_TABLE
               value: {{ .Values.aws.linksTable | quote }}
+            - name: STATS_TABLE
+              value: {{ .Values.aws.statsTable | quote }}
             - name: CLICK_QUEUE_URL
               value: {{ .Values.aws.clickQueueUrl | quote }}
             - name: BASE_URL

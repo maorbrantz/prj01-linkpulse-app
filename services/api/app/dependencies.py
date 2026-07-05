@@ -19,7 +19,7 @@ def get_link_repository() -> LinkRepository:
 
 def get_stats_repository() -> StatsRepository:
     config = get_config()
-    table = dynamodb_resource(config).Table("click_stats")
+    table = dynamodb_resource(config).Table(config.stats_table)
     return StatsRepository(table)
 
 
