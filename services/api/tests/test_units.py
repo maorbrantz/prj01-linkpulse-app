@@ -42,6 +42,40 @@ def test_load_config_treats_blank_endpoint_as_none(monkeypatch):
     assert config.endpoint_url is None
 
 
+def test_load_config_fail_rate_defaults_to_zero(monkeypatch):
+    monkeypatch.delenv("FAIL_RATE", raising=False)
+
+    config = load_config()
+
+    assert config.fail_rate == 0.0
+
+
+def test_load_config_reads_fail_rate(monkeypatch):
+    monkeypatch.setenv("FAIL_RATE", "0.25")
+
+    config = load_config()
+
+    assert config.fail_rate == 0.25
+
+
+def test_load_config_clamps_fail_rate_to_unit_range(monkeypatch):
+    monkeypatch.setenv("FAIL_RATE", "5")
+
+    assert load_config().fail_rate == 1.0
+
+    monkeypatch.setenv("FAIL_RATE", "-2")
+
+    assert load_config().fail_rate == 0.0
+
+
+def test_load_config_ignores_non_numeric_fail_rate(monkeypatch):
+    monkeypatch.setenv("FAIL_RATE", "nope")
+
+    config = load_config()
+
+    assert config.fail_rate == 0.0
+
+
 def test_build_stats_sums_and_sorts_days():
     items = [
         {"short_code": "abc", "day": "2026-07-02", "count": 2},
