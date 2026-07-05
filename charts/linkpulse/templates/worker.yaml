@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "linkpulse.name" . }}-worker
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "linkpulse.name" . }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "linkpulse.labels" . | nindent 8 }}
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: {{ include "linkpulse.serviceAccountName" . }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.repository }}-worker:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.worker.metricsPort }}
+          env:
+            - name: METRICS_PORT
+              value: "{{ .Values.worker.metricsPort }}"
+            - name: AWS_REGION
+              value: {{ .Values.aws.region | quote }}
+            - name: STATS_TABLE
+              value: {{ .Values.aws.statsTable | quote }}
+            - name: CLICK_QUEUE_URL
+              value: {{ .Values.aws.clickQueueUrl | quote }}
+            {{- if .Values.aws.endpointUrl }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.aws.endpointUrl | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}

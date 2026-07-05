@@ -1,1 +1,74 @@
-# Local dev setup (services plus localstack for SQS and DynamoDB) comes with the app implementation.
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: dynamodb,sqs
+      DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  init:
+    image: amazon/aws-cli:2.17.0
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pip install awscli-local >/dev/null 2>&1 || true
+        sh /init/localstack-init.sh
+    volumes:
+      - ./deploy:/init:ro
+
+  api:
+    build: ./services/api
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      LINKS_TABLE: links
+      CLICK_QUEUE_URL: http://localstack:4566/000000000000/clicks
+      BASE_URL: http://localhost:8000
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: ./services/worker
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localstack:4566
+      STATS_TABLE: click_stats
+      CLICK_QUEUE_URL: http://localstack:4566/000000000000/clicks
+      WAIT_TIME_SECONDS: "5"
+      METRICS_PORT: "9000"
+    ports:
+      - "9000:9000"
+
+  web:
+    build: ./services/web
+    depends_on:
+      - api
+    environment:
+      WEB_PORT: "8080"
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "8080:8080"
