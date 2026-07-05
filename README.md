@@ -1,5 +1,8 @@
 # prj01-linkpulse-app
 
+[![ci](https://github.com/maorbrantz/prj01-linkpulse-app/actions/workflows/ci.yml/badge.svg)](https://github.com/maorbrantz/prj01-linkpulse-app/actions/workflows/ci.yml)
+[![release](https://github.com/maorbrantz/prj01-linkpulse-app/actions/workflows/release.yml/badge.svg)](https://github.com/maorbrantz/prj01-linkpulse-app/actions/workflows/release.yml)
+
 LinkPulse: a small URL shortener with click analytics. Built to run on the EKS platform from [prj01-eks-gitops-platform](https://github.com/maorbrantz/prj01-eks-gitops-platform).
 
 ## Services
