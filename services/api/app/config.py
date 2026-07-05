@@ -11,6 +11,7 @@ class Config:
     endpoint_url: str | None
     base_url: str
     short_code_length: int
+    fail_rate: float
 
 
 def load_config() -> Config:
@@ -23,4 +24,16 @@ def load_config() -> Config:
         endpoint_url=endpoint,
         base_url=os.getenv("BASE_URL", "http://localhost:8000"),
         short_code_length=int(os.getenv("SHORT_CODE_LENGTH", "7")),
+        # fault injection knob for the canary rollback demo. the fraction of
+        # redirect requests that return a 500 instead of redirecting. defaults to
+        # off. a bad release sets this so its canary pods fail analysis.
+        fail_rate=_parse_fail_rate(os.getenv("FAIL_RATE", "0.0")),
     )
+
+
+def _parse_fail_rate(raw: str) -> float:
+    try:
+        value = float(raw)
+    except ValueError:
+        return 0.0
+    return min(max(value, 0.0), 1.0)
