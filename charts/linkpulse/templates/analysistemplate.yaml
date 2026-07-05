@@ -1,0 +1,61 @@
+{{- if .Values.api.analysis.enabled }}
+# Success rate analysis. Measures the non-5xx share of requests served by the
+# canary pods only, so a bad canary is caught while stable pods keep serving.
+# The canary pod-template-hash is injected by the rollout as an arg, and the
+# query joins the http_requests_total series to kube_pod_info for pods whose
+# name carries that hash.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "linkpulse.name" . }}-api-success-rate
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: success-rate
+      interval: {{ .Values.api.analysis.interval }}
+      # give the metric a couple of chances before deciding the canary is bad.
+      failureLimit: {{ .Values.api.analysis.failureLimit }}
+      count: 3
+      successCondition: result[0] >= {{ .Values.api.analysis.successRateThreshold }}
+      provider:
+        prometheus:
+          address: {{ .Values.api.analysis.prometheusAddress }}
+          query: |
+            sum(rate(http_requests_total{namespace="{{ .Release.Namespace }}", pod=~".*-{{ "{{args.canary-hash}}" }}-.*", status!~"5.."}[1m]))
+              /
+            clamp_min(
+              sum(rate(http_requests_total{namespace="{{ .Release.Namespace }}", pod=~".*-{{ "{{args.canary-hash}}" }}-.*"}[1m])),
+              0.001
+            )
+---
+# Latency analysis. p95 request latency on the canary pods must stay under the
+# threshold.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "linkpulse.name" . }}-api-latency
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: p95-latency
+      interval: {{ .Values.api.analysis.interval }}
+      failureLimit: {{ .Values.api.analysis.failureLimit }}
+      count: 3
+      successCondition: result[0] <= {{ .Values.api.analysis.latencyThresholdSeconds }}
+      provider:
+        prometheus:
+          address: {{ .Values.api.analysis.prometheusAddress }}
+          query: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}", pod=~".*-{{ "{{args.canary-hash}}" }}-.*"}[1m])) by (le)
+            )
+{{- end }}
