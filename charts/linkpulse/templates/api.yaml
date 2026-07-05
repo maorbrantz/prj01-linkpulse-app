@@ -1,16 +1,27 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "linkpulse.name" . }}-api
   labels:
     {{- include "linkpulse.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
 spec:
-  replicas: {{ .Values.api.replicas }}
+  # the hpa owns the replica count, so no static replicas field here. the canary
+  # is replica ratio based (no trafficRouting): ingress reaches the api through
+  # the web nginx and the api Service, so weight is expressed as a share of pods.
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "linkpulse.name" . }}
       app.kubernetes.io/component: api
+  strategy:
+    canary:
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - setWeight: 50
+        - pause:
+            duration: 60s
   template:
     metadata:
       labels:
@@ -70,3 +81,25 @@ spec:
   ports:
     - port: {{ .Values.api.port }}
       targetPort: {{ .Values.api.port }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "linkpulse.name" . }}-api
+  labels:
+    {{- include "linkpulse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  scaleTargetRef:
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    name: {{ include "linkpulse.name" . }}-api
+  minReplicas: {{ .Values.api.hpa.minReplicas }}
+  maxReplicas: {{ .Values.api.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.api.hpa.targetCPUUtilizationPercentage }}
