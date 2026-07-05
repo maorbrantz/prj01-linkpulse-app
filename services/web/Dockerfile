@@ -5,7 +5,8 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 # patch the base os packages so the image scan does not trip on fixed cves.
 USER root
 RUN apk upgrade --no-cache
-USER nginx
+# numeric uid (nginx) so the kubelet can verify non-root under the cluster policy.
+USER 101
 
 ENV WEB_PORT=8080 \
     API_UPSTREAM=http://api:8000
