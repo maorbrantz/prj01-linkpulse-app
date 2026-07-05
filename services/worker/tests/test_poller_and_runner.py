@@ -31,7 +31,15 @@ def test_poller_delete_noop_on_empty(click_queue):
     sqs = boto3.client("sqs", region_name="us-east-1")
     poller = SqsPoller(sqs, click_queue, wait_time=0, max_messages=10)
 
-    poller.delete([])
+    assert poller.delete([]) == []
+
+
+def test_poller_delete_returns_failed_handles():
+    poller = SqsPoller(_PartialFailSqs(), "http://q", wait_time=0, max_messages=10)
+
+    failed = poller.delete(["h0", "h1", "h2"])
+
+    assert failed == ["h1"]
 
 
 def test_run_once_processes_and_removes_message(click_queue, stats_table):
@@ -45,6 +53,18 @@ def test_run_once_processes_and_removes_message(click_queue, stats_table):
     assert count == 1
     item = stats_table.get_item(Key={"short_code": "abc", "day": "2026-07-05"})["Item"]
     assert int(item["count"]) == 1
+
+
+def test_run_once_logs_when_delete_fails(click_queue, stats_table, caplog):
+    _seed(click_queue, "abc")
+    sqs = boto3.client("sqs", region_name="us-east-1")
+    poller = _DeleteFailingPoller(sqs, click_queue, wait_time=0, max_messages=10)
+    processor = ClickProcessor(StatsRepository(stats_table))
+
+    with caplog.at_level("WARNING"):
+        run_once(poller, processor)
+
+    assert "delete_failed" in caplog.text
 
 
 def test_run_once_returns_zero_when_empty(click_queue, stats_table):
@@ -85,3 +105,13 @@ class _OneShotFlag:
         stop = self._checks >= 1
         self._checks += 1
         return stop
+
+
+class _PartialFailSqs:
+    def delete_message_batch(self, **kwargs):
+        return {"Failed": [{"Id": "1"}]}
+
+
+class _DeleteFailingPoller(SqsPoller):
+    def delete(self, handles):
+        return list(handles)

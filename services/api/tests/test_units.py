@@ -59,8 +59,9 @@ def test_click_publisher_skips_when_no_queue():
     sent = []
     publisher = ClickPublisher(_RecordingSqs(sent), "")
 
-    publisher.publish("abc")
+    result = publisher.publish("abc")
 
+    assert result is False
     assert sent == []
 
 
@@ -68,10 +69,19 @@ def test_click_publisher_sends_payload():
     sent = []
     publisher = ClickPublisher(_RecordingSqs(sent), "http://queue")
 
-    publisher.publish("abc")
+    result = publisher.publish("abc")
 
+    assert result is True
     assert len(sent) == 1
     assert json.loads(sent[0]["MessageBody"])["short_code"] == "abc"
+
+
+def test_click_publisher_reports_failure_without_raising():
+    publisher = ClickPublisher(_FailingSqs(), "http://queue")
+
+    result = publisher.publish("abc")
+
+    assert result is False
 
 
 def test_stats_repository_returns_empty_on_client_error():
@@ -135,6 +145,11 @@ class _RecordingSqs:
 
     def send_message(self, **kwargs):
         self._sent.append(kwargs)
+
+
+class _FailingSqs:
+    def send_message(self, **kwargs):
+        raise ClientError({"Error": {"Code": "ServiceUnavailable"}}, "SendMessage")
 
 
 class _FailingTable:

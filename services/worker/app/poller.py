@@ -13,8 +13,12 @@ class SqsPoller:
         )
         return response.get("Messages", [])
 
-    def delete(self, handles: list[str]) -> None:
+    def delete(self, handles: list[str]) -> list[str]:
         if not handles:
-            return
+            return []
         entries = [{"Id": str(i), "ReceiptHandle": h} for i, h in enumerate(handles)]
-        self._sqs.delete_message_batch(QueueUrl=self._queue_url, Entries=entries)
+        response = self._sqs.delete_message_batch(
+            QueueUrl=self._queue_url, Entries=entries
+        )
+        failed_ids = {item["Id"] for item in response.get("Failed", [])}
+        return [handles[int(i)] for i in failed_ids]

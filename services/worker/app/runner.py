@@ -26,13 +26,17 @@ def run_once(poller: SqsPoller, processor: ClickProcessor) -> int:
         return 0
     BATCHES_POLLED.inc()
     handles = processor.process_batch(messages)
-    poller.delete(handles)
+    failed = poller.delete(handles)
+    if failed:
+        log_with_fields(
+            logger, logging.WARNING, "delete_failed", count=len(failed)
+        )
     log_with_fields(
         logger,
         logging.INFO,
         "batch_processed",
         received=len(messages),
-        deleted=len(handles),
+        deleted=len(handles) - len(failed),
     )
     return len(messages)
 
