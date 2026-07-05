@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.12-slim AS runtime
 
+# patch the base os packages so the image scan does not trip on fixed cves.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 1000 app && useradd --system --uid 1000 --gid app --home /app app
 
 COPY --from=builder /install /usr/local
