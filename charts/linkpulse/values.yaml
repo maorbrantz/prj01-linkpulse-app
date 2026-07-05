@@ -33,6 +33,10 @@ api:
   port: 8000
   baseUrl: ""
   serviceAccountName: ""
+  # fault injection rate for the canary rollback demo. 0.0 means the api behaves
+  # normally. a bad release sets this above zero so its canary pods return 500s
+  # and fail the prometheus analysis.
+  failRate: "0.0"
   # the api runs as an argo rollouts Rollout with a canary strategy. the hpa owns
   # replica count, so minReplicas is the floor rather than a static replicas value.
   hpa:
@@ -46,11 +50,32 @@ api:
     limits:
       cpu: 500m
       memory: 512Mi
+  # a ServiceMonitor so prometheus scrapes the api /metrics endpoint. prometheus
+  # runs with cross namespace selectors, so a monitor here is picked up.
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+  # prometheus driven canary analysis. between the weight steps the rollout runs
+  # these AnalysisTemplates against prometheus. if success rate drops below the
+  # threshold or p95 latency climbs above it, the analysis fails and the rollout
+  # aborts back to the stable version.
+  analysis:
+    enabled: true
+    prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+    successRateThreshold: "0.99"
+    latencyThresholdSeconds: "0.5"
+    interval: 30s
+    # abort after two consecutive bad measurements so a bad canary rolls back fast.
+    failureLimit: 2
 
 worker:
   replicas: 1
   metricsPort: 9000
   serviceAccountName: ""
+  # a ServiceMonitor so prometheus scrapes the worker /metrics endpoint.
+  serviceMonitor:
+    enabled: true
+    interval: 30s
   resources:
     requests:
       cpu: 50m

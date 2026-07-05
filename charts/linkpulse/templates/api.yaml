@@ -17,9 +17,35 @@ spec:
     canary:
       steps:
         - setWeight: 20
+        {{- if .Values.api.analysis.enabled }}
+        # run the metric analysis against the 20 percent canary. a bad release
+        # fails here and the rollout aborts before shifting more traffic.
+        - analysis:
+            templates:
+              - templateName: {{ include "linkpulse.name" . }}-api-success-rate
+              - templateName: {{ include "linkpulse.name" . }}-api-latency
+            args:
+              # the rollout injects the current canary ReplicaSet pod-template
+              # hash so the analysis queries only the canary pods.
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+        {{- end }}
         - pause:
             duration: 60s
         - setWeight: 50
+        {{- if .Values.api.analysis.enabled }}
+        - analysis:
+            templates:
+              - templateName: {{ include "linkpulse.name" . }}-api-success-rate
+              - templateName: {{ include "linkpulse.name" . }}-api-latency
+            args:
+              # the rollout injects the current canary ReplicaSet pod-template
+              # hash so the analysis queries only the canary pods.
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+        {{- end }}
         - pause:
             duration: 60s
   template:
@@ -52,6 +78,8 @@ spec:
               value: {{ .Values.aws.clickQueueUrl | quote }}
             - name: BASE_URL
               value: {{ .Values.api.baseUrl | quote }}
+            - name: FAIL_RATE
+              value: {{ .Values.api.failRate | quote }}
             {{- if .Values.aws.endpointUrl }}
             - name: AWS_ENDPOINT_URL
               value: {{ .Values.aws.endpointUrl | quote }}
@@ -79,7 +107,8 @@ spec:
     app.kubernetes.io/name: {{ include "linkpulse.name" . }}
     app.kubernetes.io/component: api
   ports:
-    - port: {{ .Values.api.port }}
+    - name: http
+      port: {{ .Values.api.port }}
       targetPort: {{ .Values.api.port }}
 ---
 apiVersion: autoscaling/v2
