@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 FROM python:3.12-slim AS runtime
 
-RUN groupadd --system app && useradd --system --gid app --home /app app
+RUN groupadd --system --gid 1000 app && useradd --system --uid 1000 --gid app --home /app app
 
 COPY --from=builder /install /usr/local
 WORKDIR /app
@@ -17,7 +17,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 
-USER app
+# numeric uid so the kubelet can verify the container runs as non-root under a
+# runAsNonRoot policy without a non-numeric user lookup.
+USER 1000
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
