@@ -9,6 +9,16 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # a bare short code at the root resolves through the api redirect, so the
+    # short_url the api hands out is shareable as is
+    location ~ "^/[A-Za-z0-9]{4,16}$" {
+        proxy_pass         ${API_UPSTREAM};
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
     location /api/ {
         proxy_pass         ${API_UPSTREAM}/;
         proxy_set_header   Host $host;
