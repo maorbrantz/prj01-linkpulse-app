@@ -3,49 +3,106 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LinkPulse</title>
+    <title>LinkPulse - short links with a heartbeat</title>
+    <meta name="description" content="Shorten a URL and watch its clicks land in real time." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="%230b1020"/><path d="M8 24h8l3-9 5 18 4-13 2 4h10" fill="none" stroke="%2322d3ee" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' />
   </head>
   <body>
-    <main class="card">
-      <header>
-        <h1>LinkPulse</h1>
-        <p class="tagline">Shorten a link, then watch the clicks add up.</p>
-      </header>
+    <div class="bg-aurora" aria-hidden="true"></div>
+    <div class="bg-grid" aria-hidden="true"></div>
 
-      <form id="shorten-form">
-        <label for="url-input">Long URL</label>
-        <div class="row">
-          <input
-            id="url-input"
-            name="url"
-            type="url"
-            placeholder="https://example.com/a-very-long-path"
-            required
-          />
-          <button type="submit">Shorten</button>
+    <header class="top">
+      <a class="brand" href="/">
+        <svg class="brand-mark" viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="LinkPulse logo">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#22d3ee" />
+              <stop offset="1" stop-color="#8b5cf6" />
+            </linearGradient>
+          </defs>
+          <rect width="48" height="48" rx="12" fill="#0b1020" stroke="url(#lg)" stroke-width="1.5" />
+          <path class="pulse-line" d="M8 24h8l3-9 5 18 4-13 2 4h10"
+                fill="none" stroke="url(#lg)" stroke-width="3.2"
+                stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span class="brand-name">Link<em>Pulse</em></span>
+      </a>
+      <nav class="top-links">
+        <a class="chip" href="https://github.com/maorbrantz/prj01-eks-gitops-platform" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          source
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Short links with a <span class="grad">heartbeat</span>.</h1>
+        <p class="sub">Paste a long URL, get a short one, and watch every click land in real time.</p>
+      </section>
+
+      <section class="card" id="shorten-card">
+        <form id="shorten-form" autocomplete="off">
+          <div class="field">
+            <input id="url-input" name="url" type="url" required
+                   placeholder="https://example.com/a/very/long/path"
+                   aria-label="URL to shorten" />
+            <button id="shorten-btn" type="submit"><span class="btn-label">Shorten</span></button>
+          </div>
+        </form>
+        <p id="error" class="error hidden" role="alert"></p>
+      </section>
+
+      <section class="card result hidden" id="result">
+        <div class="result-head">
+          <span class="dot" aria-hidden="true"></span>
+          <span>your link is live</span>
         </div>
-      </form>
-
-      <section id="result" class="result hidden">
-        <p>Your short link:</p>
-        <a id="short-link" href="#" target="_blank" rel="noopener"></a>
-        <button id="stats-button" type="button">View stats</button>
+        <div class="result-row">
+          <a id="short-link" class="short-url" href="#" target="_blank" rel="noopener"></a>
+          <div class="result-actions">
+            <button class="ghost" id="copy-button" type="button">copy</button>
+            <button class="ghost" id="stats-button" type="button">pulse</button>
+          </div>
+        </div>
       </section>
 
-      <section id="stats" class="stats hidden">
-        <h2>Clicks for <span id="stats-code"></span></h2>
-        <p class="total">Total: <span id="stats-total">0</span></p>
-        <table>
-          <thead>
-            <tr><th>Day</th><th>Clicks</th></tr>
-          </thead>
-          <tbody id="stats-rows"></tbody>
-        </table>
+      <section class="card stats hidden" id="stats">
+        <div class="stats-head">
+          <div>
+            <span class="stats-label">pulse of</span>
+            <span class="code" id="stats-code"></span>
+          </div>
+          <label class="live-toggle">
+            <input type="checkbox" id="live-toggle" />
+            <span class="live-pill"><span class="live-dot"></span>live</span>
+          </label>
+        </div>
+        <div class="stats-body">
+          <div class="total">
+            <span class="total-num" id="stats-total">0</span>
+            <span class="total-label">total clicks</span>
+          </div>
+          <svg id="chart" class="chart" viewBox="0 0 560 180" preserveAspectRatio="none" role="img"
+               aria-label="Clicks per day"></svg>
+        </div>
       </section>
 
-      <p id="error" class="error hidden"></p>
+      <section class="recent hidden" id="recent">
+        <h2>recent links</h2>
+        <ul id="recent-list"></ul>
+      </section>
     </main>
+
+    <footer>
+      <span class="chip dim">runs on EKS · il-central-1</span>
+      <span class="chip dim">deployed by ArgoCD</span>
+      <span class="chip dim">canary by Argo Rollouts</span>
+    </footer>
 
     <script src="app.js"></script>
   </body>
